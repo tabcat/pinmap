@@ -60,6 +60,7 @@ Deno.test("createDefaultGetPinnerset", async (t) => {
   });
 });
 
+// todo: test concurrency of pins and unpins
 Deno.test("createPinmap", async (t) => {
   let pinners: PinnerIds;
   let getPinnerset: GetPinnerset;
