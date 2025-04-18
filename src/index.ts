@@ -40,6 +40,13 @@ class DefaultPinmap implements Pinmap {
     private readonly openPinnerset: GetPinnerset
   ) {}
 
+  /**
+   * Thinking about concurrency issues with pins and unpins.
+   * What needs to be watched is concurrency per CID.
+   * Pin must only return true if the pin was added and no previous pin existed for that CID.
+   * Unpin must only return true if the last pin was removed and no new pins are being added for that CID.
+   */
+
   async pin(name: string, cid: CID): Promise<boolean> {
     const id = await this.pinnerIds.resolve(name);
     const { ds, close } = await this.openPinnerset(cid);
