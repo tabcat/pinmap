@@ -74,13 +74,15 @@ Deno.test("createPinmap", async (t) => {
   });
 
   await t.step("should pin a name to a cid", async () => {
-    await pinmap.pin("test", cid);
+    const pin = await pinmap.pin("test", cid);
     expect(pinmap).toBeDefined();
+    expect(pin).toBe(true);
   });
 
   await t.step("should pin a second name to a cid", async () => {
-    await pinmap.pin("test2", cid);
+    const pin = await pinmap.pin("test2", cid);
     expect(pinmap).toBeDefined();
+    expect(pin).toBe(false);
   });
 
   await t.step("should unpin a name from a cid", async () => {

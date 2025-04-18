@@ -28,7 +28,7 @@ export interface PinnerIds {
 }
 
 export interface Pinmap {
-  pin(name: string, cid: CID): Await<void>;
+  pin(name: string, cid: CID): Await<boolean>;
   unpin(name: string, cid: CID): Await<boolean>;
 }
 
@@ -40,13 +40,20 @@ class DefaultPinmap implements Pinmap {
     private readonly openPinnerset: GetPinnerset
   ) {}
 
-  async pin(name: string, cid: CID) {
+  async pin(name: string, cid: CID): Promise<boolean> {
     const id = await this.pinnerIds.resolve(name);
     const { ds, close } = await this.openPinnerset(cid);
+
+    let empty = true;
+    for await (const _ of ds.queryKeys({})) {
+      empty = false;
+      break;
+    }
 
     await ds.put(new Key(id), bytes);
 
     await close?.();
+    return empty;
   }
 
   async unpin(name: string, cid: CID): Promise<boolean> {
@@ -60,8 +67,8 @@ class DefaultPinmap implements Pinmap {
       empty = false;
       break;
     }
-    await close?.();
 
+    await close?.();
     return empty;
   }
 }
