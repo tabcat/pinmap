@@ -5,8 +5,9 @@ import {
   createDefaultGetPinnerset,
   type PinnerIds,
   type Pinnerset,
-  type GetPinnerset,
+  type OpenPinnerset,
   type Pinmap,
+  PinnersetHandler,
 } from "../src/index.ts";
 import { CID } from "multiformats/cid";
 import { sha256 } from "multiformats/hashes/sha2";
@@ -45,7 +46,7 @@ Deno.test("createDefaultPinners", async (t) => {
 });
 
 Deno.test("createDefaultGetPinnerset", async (t) => {
-  let getPinnerset: GetPinnerset;
+  let getPinnerset: OpenPinnerset;
   let pinnerset: Pinnerset;
 
   await t.step("should create a getPinnerset", () => {
@@ -60,17 +61,71 @@ Deno.test("createDefaultGetPinnerset", async (t) => {
   });
 });
 
+Deno.test("PinnersetHandler", async (t) => {
+  let pinnersetHandler: PinnersetHandler;
+  const pinnersets: Map<string, Promise<Pinnerset>> = new Map();
+
+  await t.step("should create a pinnerset manager", () => {
+    pinnersetHandler = new PinnersetHandler(createDefaultGetPinnerset(), pinnersets);
+    expect(pinnersetHandler).toBeDefined();
+  });
+
+  await t.step("should aquire sequentially for same CID", async () => {
+    const cid = await createCID();
+
+    const pinnersetPromise = pinnersetHandler.aquire(cid);
+    expect(Array.from(pinnersets.values()).length).toBe(1);
+
+    const pinnerset2Promise = pinnersetHandler.aquire(cid);
+    expect(Array.from(pinnersets.values()).length).toBe(1);
+
+    const pinnerset = await pinnersetPromise;
+    expect(pinnerset).toBeDefined();
+
+    await pinnerset.close?.();
+
+    const pinnerset2 = await pinnerset2Promise;
+    expect(pinnerset2).toBeDefined();
+
+    await pinnerset2.close?.();
+    expect(Array.from(pinnersets.values()).length).toBe(0);
+  });
+  
+
+  await t.step("should aquire concurrently for different CIDs", async () => {
+    const cid = await createCID();
+    const cid2 = await createCID();
+
+    const [pinnerset, pinnerset2] = await Promise.all([
+      pinnersetHandler.aquire(cid),
+      pinnersetHandler.aquire(cid2),
+    ]);
+
+    expect(pinnerset).toBeDefined();
+    expect(pinnerset2).toBeDefined();
+    expect(Array.from(pinnersets.values()).length).toBe(2);
+
+    await Promise.all([
+      pinnerset.close?.(),
+      pinnerset2.close?.(),
+    ]);
+
+    expect(Array.from(pinnersets.values()).length).toBe(0);
+  });
+
+});
+
 // todo: test concurrency of pins and unpins
 Deno.test("createPinmap", async (t) => {
   let pinners: PinnerIds;
-  let getPinnerset: GetPinnerset;
+  let openPinnerset: OpenPinnerset;
   let pinmap: Pinmap;
   const cid = await createCID();
 
   await t.step("should create a pinmap", () => {
     pinners = createDefaultPinners();
-    getPinnerset = createDefaultGetPinnerset();
-    pinmap = createPinmap(pinners, getPinnerset);
+    openPinnerset = createDefaultGetPinnerset();
+    pinmap = createPinmap(pinners, openPinnerset);
     expect(pinmap).toBeDefined();
   });
 
@@ -97,4 +152,15 @@ Deno.test("createPinmap", async (t) => {
     expect(pinmap).toBeDefined();
     expect(bool).toBe(true);
   });
+
+  await t.step("should handle concurrent pins and unpins for the same CID", async () => {
+    const bool = pinmap.pin("test", cid);
+    const bool2 = pinmap.pin("test2", cid);
+    const bool3 = pinmap.unpin("test", cid);
+    const bool4 = pinmap.unpin("test2", cid);
+    expect(await bool).toBe(true);
+    expect(await bool2).toBe(false);
+    expect(await bool3).toBe(false);
+    expect(await bool4).toBe(true);
+  })
 });

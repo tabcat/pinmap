@@ -9,36 +9,91 @@ import { Key } from "interface-datastore";
 import type { CID } from "multiformats/cid";
 import { MemoryDatastore } from "datastore-core";
 
-export type Await<T> = T | Promise<T>;
+export type Awaitable<T> = T | Promise<T>;
 
-export interface GetPinnerset {
-  (cid: CID): Await<Pinnerset>;
+export interface OpenPinnerset {
+  (cid: CID): Awaitable<Pinnerset>;
 }
 
 export interface Pinnerset {
   ds: Datastore;
-  close?: () => Promise<void>;
+  close?: () => Awaitable<void>;
 }
 
 export interface PinnerIds {
   /**
    * Only one way resolution is needed from original name to shortened id.
    */
-  resolve(name: string): Await<string>;
+  resolve(name: string): Awaitable<string>;
 }
 
 export interface Pinmap {
-  pin(name: string, cid: CID): Await<boolean>;
-  unpin(name: string, cid: CID): Await<boolean>;
+  pin(name: string, cid: CID): Awaitable<boolean>;
+  unpin(name: string, cid: CID): Awaitable<boolean>;
 }
 
 const bytes = new Uint8Array();
 
+const createDeferred = <T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+} => {
+  let resolve!: (value: T) => void;
+
+  const promise = new Promise<T>((r) => {
+    resolve = r;
+  });
+
+  return { promise, resolve };
+};
+
+/**
+ * Handles concurrency of pinnersets per CID.
+ */
+export class PinnersetHandler {
+  constructor(
+    private readonly openPinnerset: OpenPinnerset,
+    private readonly pinnersets: Map<string, Promise<Pinnerset>>
+  ) {}
+
+  async aquire(cid: CID): Promise<Pinnerset> {
+    const cidstring = String(cid);
+
+    let pinnersetPromise = this.pinnersets.get(cidstring);
+
+    const { promise, resolve } = createDeferred<Pinnerset>();
+    this.pinnersets.set(cidstring, promise);
+
+    if (pinnersetPromise == null) {
+      pinnersetPromise = Promise.resolve(this.openPinnerset(cid));
+    }
+
+    const pinnerset = await pinnersetPromise;
+
+    const close = async () => {
+      // If the promise was not overwritten, we are the last one and can close the pinnerset.
+      if (this.pinnersets.get(cidstring) === promise) {
+        this.pinnersets.delete(cidstring);
+        // wondering if could cause issues when an open is called concurrently. possible lock errors
+        await pinnerset.close?.();
+      } else {
+        resolve(pinnerset);
+      }
+    };
+
+    return { ds: pinnerset.ds, close };
+  }
+}
+
 class DefaultPinmap implements Pinmap {
+  #pinnersetManager: PinnersetHandler;
+
   constructor(
     private readonly pinnerIds: PinnerIds,
-    private readonly openPinnerset: GetPinnerset
-  ) {}
+    openPinnerset: OpenPinnerset
+  ) {
+    this.#pinnersetManager = new PinnersetHandler(openPinnerset, new Map());
+  }
 
   /**
    * Thinking about concurrency issues with pins and unpins.
@@ -49,7 +104,7 @@ class DefaultPinmap implements Pinmap {
 
   async pin(name: string, cid: CID): Promise<boolean> {
     const id = await this.pinnerIds.resolve(name);
-    const { ds, close } = await this.openPinnerset(cid);
+    const { ds, close } = await this.#pinnersetManager.aquire(cid);
 
     let empty = true;
     for await (const _ of ds.queryKeys({})) {
@@ -65,7 +120,7 @@ class DefaultPinmap implements Pinmap {
 
   async unpin(name: string, cid: CID): Promise<boolean> {
     const id = await this.pinnerIds.resolve(name);
-    const { ds, close } = await this.openPinnerset(cid);
+    const { ds, close } = await this.#pinnersetManager.aquire(cid);
 
     await ds.delete(new Key(id));
 
@@ -97,7 +152,7 @@ export function createDefaultPinners(): PinnerIds {
   };
 }
 
-export function createDefaultGetPinnerset(): GetPinnerset {
+export function createDefaultGetPinnerset(): OpenPinnerset {
   const pinnersetDatastores = new Map<string, Datastore>();
 
   return (cid: CID) => {
@@ -112,6 +167,6 @@ export function createDefaultGetPinnerset(): GetPinnerset {
   };
 }
 
-export function createPinmap(pinners: PinnerIds, getPinnerset: GetPinnerset) {
+export function createPinmap(pinners: PinnerIds, getPinnerset: OpenPinnerset) {
   return new DefaultPinmap(pinners, getPinnerset);
 }
