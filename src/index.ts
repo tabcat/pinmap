@@ -167,6 +167,6 @@ export function createDefaultGetPinnerset(): OpenPinnerset {
   };
 }
 
-export function createPinmap(pinners: PinnerIds, getPinnerset: OpenPinnerset) {
+export function createPinmap(pinners: PinnerIds, getPinnerset: OpenPinnerset): Pinmap {
   return new DefaultPinmap(pinners, getPinnerset);
 }
