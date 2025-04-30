@@ -1,6 +1,6 @@
 /**
  * There is a store for each CID which contains a set of ids, these are called pinnersets.
- * And there is a store that maps names to ids called a dictionary.
+ * And there is a store that maps names to ids called a pinnerids.
  * Together they form a pinmap.
  */
 
