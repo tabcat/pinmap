@@ -1,19 +1,16 @@
 {
-  "name": "ts-template-pnpm",
+  "name": "pinmap",
   "version": "1.0.0",
-  "description": "",
+  "description": "keeps track of who is pinning what CID",
   "type": "module",
   "main": "index.js",
   "files": [
     "./dist/src"
   ],
-  "keywords": [],
+  "keywords": ["ipfs", "pin", "pinset", "pinmap"],
   "author": "tabcat",
   "license": "MIT",
   "scripts": {
-    "init-workflows": "mkdir .github && cp -r workflows .github",
-    "init-install": "pnpm install -D typescript typedoc vitest prettier prettier-plugin-organize-imports husky lint-staged",
-    "init": "pnpm init-workflows && pnpm init-install",
     "lint": "prettier src test --check",
     "format": "prettier src test --write",
     "build": "tsc",

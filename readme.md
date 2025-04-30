@@ -1,11 +1,4 @@
-# ts-template-pnpm
+# pinmap
 
-## Usage
+Keeps track of who is pinning what CID.
 
-`pnpm run init`
-
-installs the latest version of each packages included in the template. The script can then be deleted.
-
-### Add NPM_TOKEN to github secrets
-
-For the publish workflow to work, you need to add your NPM token as a secret to the repository.
