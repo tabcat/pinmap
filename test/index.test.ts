@@ -1,18 +1,18 @@
-import { describe, it, expect } from "vitest";
+import { CID } from "multiformats/cid";
+import { sha256 } from "multiformats/hashes/sha2";
+import { describe, expect, it } from "vitest";
 import {
+  createDefaultGetPinnerset,
   createDefaultPinners,
   createPinmap,
-  createDefaultGetPinnerset,
   type Pinnerset,
   PinnersetHandler,
 } from "../src/index.js";
-import { CID } from "multiformats/cid";
-import { sha256 } from "multiformats/hashes/sha2";
 
 const createCID = async () =>
   CID.createV1(
     0x01,
-    await sha256.digest(new TextEncoder().encode(Math.random().toString()))
+    await sha256.digest(new TextEncoder().encode(Math.random().toString())),
   );
 
 describe("createDefaultPinners", async () => {
@@ -44,8 +44,10 @@ describe("createDefaultPinners", async () => {
 
 describe("PinnersetHandler", async () => {
   const pinnersets: Map<string, Promise<Pinnerset>> = new Map();
-  const pinnersetHandler = new PinnersetHandler(createDefaultGetPinnerset(), pinnersets);
-  
+  const pinnersetHandler = new PinnersetHandler(
+    createDefaultGetPinnerset(),
+    pinnersets,
+  );
 
   it("should aquire sequentially for same CID", async () => {
     const cid = await createCID();
@@ -67,7 +69,6 @@ describe("PinnersetHandler", async () => {
     await pinnerset2.close?.();
     expect(Array.from(pinnersets.values()).length).toBe(0);
   });
-  
 
   it("should aquire concurrently for different CIDs", async () => {
     const cid = await createCID();
@@ -82,10 +83,7 @@ describe("PinnersetHandler", async () => {
     expect(pinnerset2).toBeDefined();
     expect(Array.from(pinnersets.values()).length).toBe(2);
 
-    await Promise.all([
-      pinnerset.close?.(),
-      pinnerset2.close?.(),
-    ]);
+    await Promise.all([pinnerset.close?.(), pinnerset2.close?.()]);
 
     expect(Array.from(pinnersets.values()).length).toBe(0);
   });
@@ -130,5 +128,5 @@ describe("createPinmap", async () => {
     expect(await bool2).toBe(false);
     expect(await bool3).toBe(false);
     expect(await bool4).toBe(true);
-  })
+  });
 });

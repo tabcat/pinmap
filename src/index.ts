@@ -4,10 +4,10 @@
  * Together they form a pinmap.
  */
 
+import { MemoryDatastore } from "datastore-core";
 import type { Datastore } from "interface-datastore";
 import { Key } from "interface-datastore";
 import type { CID } from "multiformats/cid";
-import { MemoryDatastore } from "datastore-core";
 
 export type Awaitable<T> = T | Promise<T>;
 
@@ -53,7 +53,7 @@ const createDeferred = <T>(): {
 export class PinnersetHandler {
   constructor(
     private readonly openPinnerset: OpenPinnerset,
-    private readonly pinnersets: Map<string, Promise<Pinnerset>>
+    private readonly pinnersets: Map<string, Promise<Pinnerset>>,
   ) {}
 
   async acquire(cid: CID): Promise<Pinnerset> {
@@ -74,7 +74,8 @@ export class PinnersetHandler {
       // If the promise was not overwritten, we are the last one and can close the pinnerset.
       if (this.pinnersets.get(cidstring) === promise) await pinnerset.close?.();
       // check again to make sure we are the last one.
-      if (this.pinnersets.get(cidstring) === promise) this.pinnersets.delete(cidstring);
+      if (this.pinnersets.get(cidstring) === promise)
+        this.pinnersets.delete(cidstring);
 
       resolve(pinnerset);
     };
@@ -88,7 +89,7 @@ class DefaultPinmap implements Pinmap {
 
   constructor(
     private readonly pinnerIds: PinnerIds,
-    openPinnerset: OpenPinnerset
+    openPinnerset: OpenPinnerset,
   ) {
     this.#pinnersetManager = new PinnersetHandler(openPinnerset, new Map());
   }
@@ -167,7 +168,7 @@ export function createDefaultGetPinnerset(): OpenPinnerset {
 
 export function createPinmap(
   pinners: PinnerIds,
-  getPinnerset: OpenPinnerset
+  getPinnerset: OpenPinnerset,
 ): Pinmap {
   return new DefaultPinmap(pinners, getPinnerset);
 }
