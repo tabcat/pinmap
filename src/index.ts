@@ -72,13 +72,11 @@ export class PinnersetHandler {
 
     const close = async () => {
       // If the promise was not overwritten, we are the last one and can close the pinnerset.
-      if (this.pinnersets.get(cidstring) === promise) {
-        this.pinnersets.delete(cidstring);
-        // wondering if could cause issues when an open is called concurrently. possible lock errors
-        await pinnerset.close?.();
-      } else {
-        resolve(pinnerset);
-      }
+      if (this.pinnersets.get(cidstring) === promise) await pinnerset.close?.();
+      // check again to make sure we are the last one.
+      if (this.pinnersets.get(cidstring) === promise) this.pinnersets.delete(cidstring);
+
+      resolve(pinnerset);
     };
 
     return { ds: pinnerset.ds, close };
@@ -167,6 +165,9 @@ export function createDefaultGetPinnerset(): OpenPinnerset {
   };
 }
 
-export function createPinmap(pinners: PinnerIds, getPinnerset: OpenPinnerset): Pinmap {
+export function createPinmap(
+  pinners: PinnerIds,
+  getPinnerset: OpenPinnerset
+): Pinmap {
   return new DefaultPinmap(pinners, getPinnerset);
 }
