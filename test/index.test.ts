@@ -73,10 +73,10 @@ Deno.test("PinnersetHandler", async (t) => {
   await t.step("should aquire sequentially for same CID", async () => {
     const cid = await createCID();
 
-    const pinnersetPromise = pinnersetHandler.aquire(cid);
+    const pinnersetPromise = pinnersetHandler.acquire(cid);
     expect(Array.from(pinnersets.values()).length).toBe(1);
 
-    const pinnerset2Promise = pinnersetHandler.aquire(cid);
+    const pinnerset2Promise = pinnersetHandler.acquire(cid);
     expect(Array.from(pinnersets.values()).length).toBe(1);
 
     const pinnerset = await pinnersetPromise;
@@ -97,8 +97,8 @@ Deno.test("PinnersetHandler", async (t) => {
     const cid2 = await createCID();
 
     const [pinnerset, pinnerset2] = await Promise.all([
-      pinnersetHandler.aquire(cid),
-      pinnersetHandler.aquire(cid2),
+      pinnersetHandler.acquire(cid),
+      pinnersetHandler.acquire(cid2),
     ]);
 
     expect(pinnerset).toBeDefined();

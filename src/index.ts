@@ -56,7 +56,7 @@ export class PinnersetHandler {
     private readonly pinnersets: Map<string, Promise<Pinnerset>>
   ) {}
 
-  async aquire(cid: CID): Promise<Pinnerset> {
+  async acquire(cid: CID): Promise<Pinnerset> {
     const cidstring = String(cid);
 
     let pinnersetPromise = this.pinnersets.get(cidstring);
@@ -104,7 +104,7 @@ class DefaultPinmap implements Pinmap {
 
   async pin(name: string, cid: CID): Promise<boolean> {
     const id = await this.pinnerIds.resolve(name);
-    const { ds, close } = await this.#pinnersetManager.aquire(cid);
+    const { ds, close } = await this.#pinnersetManager.acquire(cid);
 
     let empty = true;
     for await (const _ of ds.queryKeys({})) {
@@ -120,7 +120,7 @@ class DefaultPinmap implements Pinmap {
 
   async unpin(name: string, cid: CID): Promise<boolean> {
     const id = await this.pinnerIds.resolve(name);
-    const { ds, close } = await this.#pinnersetManager.aquire(cid);
+    const { ds, close } = await this.#pinnersetManager.acquire(cid);
 
     await ds.delete(new Key(id));
 
