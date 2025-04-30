@@ -1,5 +1,5 @@
 {
-  "name": "pinmap",
+  "name": "@tabcat/pinmap",
   "version": "1.0.0",
   "description": "keeps track of who is pinning what CID",
   "type": "module",
