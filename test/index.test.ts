@@ -1,14 +1,11 @@
-import { expect } from "@std/expect";
+import { describe, it, expect } from "vitest";
 import {
   createDefaultPinners,
   createPinmap,
   createDefaultGetPinnerset,
-  type PinnerIds,
   type Pinnerset,
-  type OpenPinnerset,
-  type Pinmap,
   PinnersetHandler,
-} from "../src/index.ts";
+} from "../src/index.js";
 import { CID } from "multiformats/cid";
 import { sha256 } from "multiformats/hashes/sha2";
 
@@ -18,26 +15,26 @@ const createCID = async () =>
     await sha256.digest(new TextEncoder().encode(Math.random().toString()))
   );
 
-Deno.test("createDefaultPinners", async (t) => {
-  let pinners: PinnerIds;
-  await t.step("should create a pinners", () => {
-    pinners = createDefaultPinners();
+describe("createDefaultPinners", async () => {
+  const pinners = createDefaultPinners();
+
+  it("should create a pinners", () => {
     expect(pinners).toBeDefined();
   });
 
-  await t.step("should resolve a new name to an id", async () => {
+  it("should resolve a new name to an id", async () => {
     const id = await pinners.resolve("test");
     expect(id).toBe(String(0));
   });
 
-  await t.step("should resolve the same name to the same id", async () => {
+  it("should resolve the same name to the same id", async () => {
     const id1 = await pinners.resolve("test");
     const id2 = await pinners.resolve("test");
     expect(id1).toBe(String(0));
     expect(id1).toBe(id2);
   });
 
-  await t.step("should resolve a new name to a different id", async () => {
+  it("should resolve a new name to a different id", async () => {
     const id1 = await pinners.resolve("test");
     const id2 = await pinners.resolve("test2");
     expect(id1).toBe(String(0));
@@ -45,32 +42,12 @@ Deno.test("createDefaultPinners", async (t) => {
   });
 });
 
-Deno.test("createDefaultGetPinnerset", async (t) => {
-  let getPinnerset: OpenPinnerset;
-  let pinnerset: Pinnerset;
-
-  await t.step("should create a getPinnerset", () => {
-    getPinnerset = createDefaultGetPinnerset();
-    expect(getPinnerset).toBeDefined();
-  });
-
-  await t.step("should get a pinnerset", async () => {
-    const cid = await createCID();
-    pinnerset = await getPinnerset(cid);
-    expect(pinnerset).toBeDefined();
-  });
-});
-
-Deno.test("PinnersetHandler", async (t) => {
-  let pinnersetHandler: PinnersetHandler;
+describe("PinnersetHandler", async () => {
   const pinnersets: Map<string, Promise<Pinnerset>> = new Map();
+  const pinnersetHandler = new PinnersetHandler(createDefaultGetPinnerset(), pinnersets);
+  
 
-  await t.step("should create a pinnerset manager", () => {
-    pinnersetHandler = new PinnersetHandler(createDefaultGetPinnerset(), pinnersets);
-    expect(pinnersetHandler).toBeDefined();
-  });
-
-  await t.step("should aquire sequentially for same CID", async () => {
+  it("should aquire sequentially for same CID", async () => {
     const cid = await createCID();
 
     const pinnersetPromise = pinnersetHandler.acquire(cid);
@@ -92,7 +69,7 @@ Deno.test("PinnersetHandler", async (t) => {
   });
   
 
-  await t.step("should aquire concurrently for different CIDs", async () => {
+  it("should aquire concurrently for different CIDs", async () => {
     const cid = await createCID();
     const cid2 = await createCID();
 
@@ -112,48 +89,39 @@ Deno.test("PinnersetHandler", async (t) => {
 
     expect(Array.from(pinnersets.values()).length).toBe(0);
   });
-
 });
 
-// todo: test concurrency of pins and unpins
-Deno.test("createPinmap", async (t) => {
-  let pinners: PinnerIds;
-  let openPinnerset: OpenPinnerset;
-  let pinmap: Pinmap;
+describe("createPinmap", async () => {
+  const pinners = createDefaultPinners();
+  const openPinnerset = createDefaultGetPinnerset();
+  const pinmap = createPinmap(pinners, openPinnerset);
   const cid = await createCID();
 
-  await t.step("should create a pinmap", () => {
-    pinners = createDefaultPinners();
-    openPinnerset = createDefaultGetPinnerset();
-    pinmap = createPinmap(pinners, openPinnerset);
-    expect(pinmap).toBeDefined();
-  });
-
-  await t.step("should pin a name to a cid", async () => {
+  it("should pin a name to a cid", async () => {
     const pin = await pinmap.pin("test", cid);
     expect(pinmap).toBeDefined();
     expect(pin).toBe(true);
   });
 
-  await t.step("should pin a second name to a cid", async () => {
+  it("should pin a second name to a cid", async () => {
     const pin = await pinmap.pin("test2", cid);
     expect(pinmap).toBeDefined();
     expect(pin).toBe(false);
   });
 
-  await t.step("should unpin a name from a cid", async () => {
+  it("should unpin a name from a cid", async () => {
     const bool = await pinmap.unpin("test", cid);
     expect(pinmap).toBeDefined();
     expect(bool).toBe(false);
   });
 
-  await t.step("should unpin a second name from a cid", async () => {
+  it("should unpin a second name from a cid", async () => {
     const bool = await pinmap.unpin("test2", cid);
     expect(pinmap).toBeDefined();
     expect(bool).toBe(true);
   });
 
-  await t.step("should handle concurrent pins and unpins for the same CID", async () => {
+  it("should handle concurrent pins and unpins for the same CID", async () => {
     const bool = pinmap.pin("test", cid);
     const bool2 = pinmap.pin("test2", cid);
     const bool3 = pinmap.unpin("test", cid);
