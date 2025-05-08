@@ -1,4 +1,3 @@
 # pinmap
 
-Keeps track of who is pinning what CID.
-
+ A pinmap is a map of CIDs to a set of pinner ids.

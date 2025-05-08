@@ -3,7 +3,6 @@ import { sha256 } from "multiformats/hashes/sha2";
 import { describe, expect, it } from "vitest";
 import {
   createDefaultGetPinnerset,
-  createDefaultPinners,
   createPinmap,
   type Pinnerset,
   PinnersetHandler,
@@ -14,33 +13,6 @@ const createCID = async () =>
     0x01,
     await sha256.digest(new TextEncoder().encode(Math.random().toString())),
   );
-
-describe("createDefaultPinners", async () => {
-  const pinners = createDefaultPinners();
-
-  it("should create a pinners", () => {
-    expect(pinners).toBeDefined();
-  });
-
-  it("should resolve a new name to an id", async () => {
-    const id = await pinners.resolve("test");
-    expect(id).toBe(String(0));
-  });
-
-  it("should resolve the same name to the same id", async () => {
-    const id1 = await pinners.resolve("test");
-    const id2 = await pinners.resolve("test");
-    expect(id1).toBe(String(0));
-    expect(id1).toBe(id2);
-  });
-
-  it("should resolve a new name to a different id", async () => {
-    const id1 = await pinners.resolve("test");
-    const id2 = await pinners.resolve("test2");
-    expect(id1).toBe(String(0));
-    expect(id2).toBe(String(1));
-  });
-});
 
 describe("PinnersetHandler", async () => {
   const pinnersets: Map<string, Promise<Pinnerset>> = new Map();
@@ -90,30 +62,29 @@ describe("PinnersetHandler", async () => {
 });
 
 describe("createPinmap", async () => {
-  const pinners = createDefaultPinners();
   const openPinnerset = createDefaultGetPinnerset();
-  const pinmap = createPinmap(pinners, openPinnerset);
+  const pinmap = createPinmap(openPinnerset);
   const cid = await createCID();
 
-  it("should pin a name to a cid", async () => {
+  it("should pin an id to a cid", async () => {
     const pin = await pinmap.pin("test", cid);
     expect(pinmap).toBeDefined();
     expect(pin).toBe(true);
   });
 
-  it("should pin a second name to a cid", async () => {
+  it("should pin a second id to a cid", async () => {
     const pin = await pinmap.pin("test2", cid);
     expect(pinmap).toBeDefined();
     expect(pin).toBe(false);
   });
 
-  it("should unpin a name from a cid", async () => {
+  it("should unpin an id from a cid", async () => {
     const bool = await pinmap.unpin("test", cid);
     expect(pinmap).toBeDefined();
     expect(bool).toBe(false);
   });
 
-  it("should unpin a second name from a cid", async () => {
+  it("should unpin a second id from a cid", async () => {
     const bool = await pinmap.unpin("test2", cid);
     expect(pinmap).toBeDefined();
     expect(bool).toBe(true);

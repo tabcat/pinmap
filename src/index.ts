@@ -1,7 +1,5 @@
 /**
- * There is a store for each CID which contains a set of ids, these are called pinnersets.
- * And there is a store that maps names to ids called a pinnerids.
- * Together they form a pinmap.
+ * A pinmap is a map of CIDs to a set of pinner ids.
  */
 
 import { MemoryDatastore } from "datastore-core";
@@ -20,16 +18,9 @@ export interface Pinnerset {
   close?: () => Awaitable<void>;
 }
 
-export interface PinnerIds {
-  /**
-   * Only one way resolution is needed from original name to shortened id.
-   */
-  resolve(name: string): Awaitable<string>;
-}
-
 export interface Pinmap {
-  pin(name: string, cid: CID): Awaitable<boolean>;
-  unpin(name: string, cid: CID): Awaitable<boolean>;
+  pin(id: string, cid: CID): Awaitable<boolean>;
+  unpin(id: string, cid: CID): Awaitable<boolean>;
 }
 
 const bytes = new Uint8Array();
@@ -87,10 +78,7 @@ export class PinnersetHandler {
 class DefaultPinmap implements Pinmap {
   #pinnersetManager: PinnersetHandler;
 
-  constructor(
-    private readonly pinnerIds: PinnerIds,
-    openPinnerset: OpenPinnerset,
-  ) {
+  constructor(openPinnerset: OpenPinnerset) {
     this.#pinnersetManager = new PinnersetHandler(openPinnerset, new Map());
   }
 
@@ -101,8 +89,7 @@ class DefaultPinmap implements Pinmap {
    * Unpin must only return true if the last pin was removed and no new pins are being added for that CID.
    */
 
-  async pin(name: string, cid: CID): Promise<boolean> {
-    const id = await this.pinnerIds.resolve(name);
+  async pin(id: string, cid: CID): Promise<boolean> {
     const { ds, close } = await this.#pinnersetManager.acquire(cid);
 
     let empty = true;
@@ -117,8 +104,7 @@ class DefaultPinmap implements Pinmap {
     return empty;
   }
 
-  async unpin(name: string, cid: CID): Promise<boolean> {
-    const id = await this.pinnerIds.resolve(name);
+  async unpin(id: string, cid: CID): Promise<boolean> {
     const { ds, close } = await this.#pinnersetManager.acquire(cid);
 
     await ds.delete(new Key(id));
@@ -132,23 +118,6 @@ class DefaultPinmap implements Pinmap {
     await close?.();
     return empty;
   }
-}
-
-export function createDefaultPinners(): PinnerIds {
-  const datastore = new MemoryDatastore();
-  let i = 0;
-
-  return {
-    resolve: async (name: string): Promise<string> => {
-      try {
-        return new TextDecoder().decode(await datastore.get(new Key(name)));
-      } catch {
-        const id = String(i++);
-        await datastore.put(new Key(name), new TextEncoder().encode(id));
-        return id;
-      }
-    },
-  };
 }
 
 export function createDefaultGetPinnerset(): OpenPinnerset {
@@ -166,9 +135,6 @@ export function createDefaultGetPinnerset(): OpenPinnerset {
   };
 }
 
-export function createPinmap(
-  pinners: PinnerIds,
-  getPinnerset: OpenPinnerset,
-): Pinmap {
-  return new DefaultPinmap(pinners, getPinnerset);
+export function createPinmap(getPinnerset: OpenPinnerset): Pinmap {
+  return new DefaultPinmap(getPinnerset);
 }
